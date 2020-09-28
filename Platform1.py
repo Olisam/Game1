@@ -2,7 +2,6 @@ import pygame
 import sys
 from pygame.locals import *
 
-
 clock = pygame.time.Clock()
 WINDOW_WIDTH = 1200
 WINDOW_HEIGHT = 800
