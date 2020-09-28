@@ -10,7 +10,6 @@ WIDTH = 300
 HEIGHT = 200
 FPS = 48
 WHITE = (255, 255, 255)
-RED = (255, 0, 0)
 BG = pygame.image.load("Background1.png")
 dino = pygame.image.load("W1.png")
 background_objects = (0.25, (40, 40, 114, 67))
