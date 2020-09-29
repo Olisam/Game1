@@ -1,6 +1,8 @@
 import pygame
 import sys
 from pygame.locals import *
+pygame.font.init()
+myfont = pygame.font.SysFont('Comic Sans MS', 30)
 
 clock = pygame.time.Clock()
 
@@ -32,6 +34,7 @@ grassL_img = pygame.image.load('grassL.png')
 grassR_img = pygame.image.load('grassR.png')
 dirtSR = pygame.image.load('DirtSideR.png')
 cloud = pygame.image.load('Cloud.png')
+slime = pygame.image.load('slime.png')
 main_Menu = pygame.image.load('Main_Menu.png')
 standingL = pygame.image.load("WL1.png")
 walkLeft = [pygame.image.load("WL1.png"), pygame.image.load("WL2.png"),
@@ -100,9 +103,15 @@ class Game:
         self.tile_rects = []
         self.dirt_img = pygame.image.load("dirt.png").convert()
         self.grass_img = pygame.image.load("grass.png").convert()
+        self.enemy = enemy(70, 40, 5, 145)
 
     def new(self):
-        self.main_menu()
+        self.player.initialise()
+        self.enemy.initialise()
+        self.run()
+
+    def restart(self):
+        self.new()
 
     def run(self):
         self.playing = True
@@ -114,12 +123,11 @@ class Game:
 
     def update(self):
         if self.player.rect.y > 215:
-            sys.exit()
-        print(self.player.rect.y)
+            self.restart()
         clock.tick(FPS)
         self.player.update()
         pygame.display.update()
-        print(clock)
+
 
     def events(self):
         for event in pygame.event.get():
@@ -143,6 +151,8 @@ class Game:
                 if event.key == K_UP:
                     if self.player.air_timer < 6:
                         self.player.vertical_momentum = -5
+                if event.key == K_r:
+                    self.restart()
             if event.type == KEYUP:
                 if event.key == K_RIGHT:
                     self.player.moving_right = False
@@ -152,6 +162,7 @@ class Game:
                     self.player.standing = True
 
     def main_menu(self):
+        textsurface = myfont.render('Start Game', False, ((WHITE)))
         while True:
 
             click = False
@@ -177,10 +188,10 @@ class Game:
 
             if button_1.collidepoint(mx, my):
                 if click:
-                    self.run()
+                    self.new()
 
             pygame.draw.rect(self.screen, (255, 0, 0), button_1)
-
+            self.screen.blit(textsurface, (550, 420))
 
             pygame.display.update()
             clock.tick(60)
@@ -196,10 +207,11 @@ class Game:
 
         self.drawTiles()
         self.player.animate()
+        self.enemy.render()
         self.screen.blit(pygame.transform.scale(self.display, (WINDOW_WIDTH, WINDOW_HEIGHT)), (0, 0))
 
     def drawTiles(self):
-        scroll[0] += (self.player.rect.x - 150 - scroll[0]) / 20
+        scroll[0] += (self.player.rect.x - 110 - scroll[0]) / 20
         scroll[1] += (self.player.rect.y - 100 - scroll[1]) / 20
         self.tile_rects.clear()
         y = 0
@@ -239,11 +251,17 @@ class Player(object):
         self.standing = True
         self.jumping = False
         self.falling = False
+        self.enemy_rects = []
+        self.takingdamage = False
+
+    def initialise(self):
+        self.rect.x = 30
+        self.rect.y = 40
+        self.lookingright = True
 
     def update(self):
-        print(self.air_timer)
         self.moving()
-        self.rect, collisions =move(self.rect, self.movement, g.tile_rects)
+        self.rect, collisions = move(self.rect, self.movement, g.tile_rects)
         if collisions['bottom'] == True:
             self.jumping = False
             self.air_timer = 0
@@ -308,9 +326,57 @@ class Player(object):
                 g.display.blit(IdleLeft[int(self.idleCount // 6)].convert_alpha(), (int(self.rect.x-scroll[0]), int(self.rect.y-scroll[1])))
                 self.idleCount += 1
 
+class enemy(object):
+    def __init__(self, x, y, start, end):
+        self.rect = pygame.Rect(x, y, 9, 7)
+        self.x = x
+        self.y = y
+        self.movement = [0, 0]
+        self.vertical_momentum = 0
+        self.collisions = []
+        self.start = start
+        self.end = end
+        self.direction = 1
+        self.target = end
+
+    def initialise(self):
+        self.vertical_momentum = 0
+        self.direction = 1
+        self.rect.x = self.x
+        self.rect.y = self.y
+
+    def render(self):
+        self.move()
+        g.display.blit(slime, (self.rect.x - scroll[0], self.rect.y - scroll[1]))
+
+    def move(self):
+        print(g.clock)
+        self.target = self.end
+        self.movement = [0, 0]
+        if self.rect.x * self.direction < self.target:
+            self.movement[0] += 1 * self.direction
+        if self.rect.x == self.end:
+            self.rect.x = self.target - 1
+            self.target = self.start
+            self.direction = -1
+        if self.rect.x == self.start:
+            self.rect.x = self.start + 1
+            self.target = self.end
+            self.direction = 1
+        self.vertical_momentum += 0.2
+        self.movement[1] += self.vertical_momentum
+        if self.vertical_momentum > 3:
+            self.vertical_momentum = 3
+        self.rect, collisions = move(self.rect, self.movement, g.tile_rects)
+        if collisions['bottom'] == True:
+            self.vertical_momentum = 0
+        if collisions['top'] == True:
+            self.vertical_momentum = 0
+        if self.rect.colliderect(g.player.rect):
+            g.restart()
 
 g = Game()
 while g.running:
-    g.new()
+    g.main_menu()
 
 pygame.quit()
