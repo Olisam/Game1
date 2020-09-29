@@ -3,6 +3,7 @@ import sys
 from pygame.locals import *
 
 clock = pygame.time.Clock()
+
 WINDOW_WIDTH = 1200
 WINDOW_HEIGHT = 800
 WIDTH = 300
@@ -10,8 +11,8 @@ HEIGHT = 200
 FPS = 48
 WHITE = (255, 255, 255)
 BG = pygame.image.load("Background1.png")
-dino = pygame.image.load("W1.png")
 background_objects = (0.25, (40, 40, 114, 67))
+scroll = [0, 0]
 
 def load_map(file):
     f = open(file, 'r')
@@ -23,18 +24,15 @@ def load_map(file):
         gamemap.append(list(row))
     return gamemap
 
-scroll = [0, 0]
-
 gamemap = load_map('level')
-
 
 grass_img = pygame.image.load('grass.png')
 dirt_img = pygame.image.load('dirt.png')
 grassL_img = pygame.image.load('grassL.png')
 grassR_img = pygame.image.load('grassR.png')
+dirtSR = pygame.image.load('DirtSideR.png')
 cloud = pygame.image.load('Cloud.png')
 main_Menu = pygame.image.load('Main_Menu.png')
-
 standingL = pygame.image.load("WL1.png")
 walkLeft = [pygame.image.load("WL1.png"), pygame.image.load("WL2.png"),
             pygame.image.load("WL3.png"), pygame.image.load("WL4.png"),
@@ -52,6 +50,14 @@ IdleLeft = [pygame.image.load("WIL1.png"), pygame.image.load("WIL1.png"),
             pygame.image.load("WIL2.png"), pygame.image.load("WIL2.png"),
             pygame.image.load("WIL1.png"), pygame.image.load("WIL1.png"),
             pygame.image.load("WIL2.png"), pygame.image.load("WIL2.png")]
+JumpR = [pygame.image.load("Wjump2.png"), pygame.image.load("Wjump2.png"),
+         pygame.image.load("Wjump2.png"), pygame.image.load("Wjump2.png")]
+JumpL = [pygame.image.load("WjumpL2.png"), pygame.image.load("WjumpL2.png"),
+         pygame.image.load("WjumpL2.png"), pygame.image.load("WjumpL2.png")]
+Falling = [pygame.image.load("Wfalling1.png"), pygame.image.load("Wfalling1.png"),
+         pygame.image.load("Wfalling2.png"), pygame.image.load("Wfalling2.png")]
+FallingL = [pygame.image.load("WfallingL1.png"), pygame.image.load("WfallingL1.png"),
+         pygame.image.load("WfallingL2.png"), pygame.image.load("WfallingL2.png")]
 
 def collision_test(rect,tiles):
     hit_list = []
@@ -71,7 +77,7 @@ def move(rect, movement, tiles):
         elif movement[0] < 0:
             rect.left = tile.right
             collision_types['left'] = True
-    rect.y += movement[1]
+    rect.y += int(movement[1])
     hit_list = collision_test(rect, tiles)
     for tile in hit_list:
         if movement[1] > 0:
@@ -81,7 +87,6 @@ def move(rect, movement, tiles):
             rect.top = tile.bottom
             collision_types['top'] = True
     return rect, collision_types
-
 
 class Game:
     def __init__(self):
@@ -108,11 +113,13 @@ class Game:
             self.draw()
 
     def update(self):
-        if self.player.rect.y > 200:
+        if self.player.rect.y > 215:
             sys.exit()
+        print(self.player.rect.y)
         clock.tick(FPS)
         self.player.update()
         pygame.display.update()
+        print(clock)
 
     def events(self):
         for event in pygame.event.get():
@@ -123,11 +130,13 @@ class Game:
             if event.type == KEYDOWN:
                 if event.key == K_RIGHT:
                     self.player.moving_right = True
+                    self.player.moving_left = False
                     self.player.lookingright = True
                     self.player.lookingleft = False
                     self.player.standing = False
                 if event.key == K_LEFT:
                     self.player.moving_left = True
+                    self.player.moving_right = False
                     self.player.lookingleft = True
                     self.player.lookingright = False
                     self.player.standing = False
@@ -141,7 +150,6 @@ class Game:
                 if event.key == K_LEFT:
                     self.player.moving_left = False
                     self.player.standing = True
-
 
     def main_menu(self):
         while True:
@@ -163,7 +171,6 @@ class Game:
 
             self.screen.blit(pygame.transform.scale(main_Menu, (1200, 800)), (0, 0))
 
-
             mx, my = pygame.mouse.get_pos()
 
             button_1 = pygame.Rect(500, 400, 200, 50)
@@ -182,30 +189,33 @@ class Game:
         self.display.blit(BG.convert(), (0, 0))
 
 
-        obj_rect = pygame.Rect(40 - scroll[0] * 0.35, 40 - scroll[1] * 0.25, 114, 67)
+        obj_rect = pygame.Rect(int(40 - scroll[0] * 0.35), int(40 - scroll[1] * 0.25), 114, 67)
         self.display.blit(cloud, (obj_rect.x, obj_rect.y))
-        obj_rect1 = pygame.Rect(140 - scroll[0] * 0.5, 50 - scroll[1] * 0.5, 114, 67)
+        obj_rect1 = pygame.Rect(int(140 - scroll[0] * 0.5), int(50 - scroll[1] * 0.5), 114, 67)
         self.display.blit(cloud, (obj_rect1.x, obj_rect1.y))
 
         self.drawTiles()
-        self.player.draw()
+        self.player.animate()
         self.screen.blit(pygame.transform.scale(self.display, (WINDOW_WIDTH, WINDOW_HEIGHT)), (0, 0))
 
     def drawTiles(self):
         scroll[0] += (self.player.rect.x - 150 - scroll[0]) / 20
         scroll[1] += (self.player.rect.y - 100 - scroll[1]) / 20
+        self.tile_rects.clear()
         y = 0
         for layer in gamemap:
             x = 0
             for tile in layer:
                 if tile == '1':
-                    self.display.blit(dirt_img.convert(), (x * 16-scroll[0], y * 16-scroll[1]))
+                    self.display.blit(dirt_img.convert(), (int(x * 16-scroll[0]), int(y * 16-scroll[1])))
                 if tile == '2':
-                    self.display.blit(grass_img.convert(), (x * 16-scroll[0], y * 16-scroll[1]))
+                    self.display.blit(grass_img.convert(), (int(x * 16-scroll[0]), int(y * 16-scroll[1])))
                 if tile == '3':
-                    self.display.blit(grassL_img, (x * 16-scroll[0], y * 16-scroll[1]))
+                    self.display.blit(grassL_img.convert_alpha(), (int(x * 16-scroll[0]), int(y * 16-scroll[1])))
                 if tile == '4':
-                    self.display.blit(grassR_img, (x * 16-scroll[0], y * 16-scroll[1]))
+                    self.display.blit(grassR_img.convert_alpha(), (int(x * 16-scroll[0]), int(y * 16-scroll[1])))
+                if tile == '5':
+                    self.display.blit(dirtSR.convert_alpha(), (int(x * 16-scroll[0]), int(y * 16-scroll[1])))
                 if tile != '0':
                     self.tile_rects.append(pygame.Rect(x * 16, y * 16, 16, 16))
                 x += 1
@@ -224,12 +234,18 @@ class Player(object):
         self.lookingright = True
         self.walkCount = 0
         self.idleCount = 0
+        self.jumpCount = 0
+        self.fallCount = 0
         self.standing = True
+        self.jumping = False
+        self.falling = False
 
     def update(self):
+        print(self.air_timer)
         self.moving()
         self.rect, collisions =move(self.rect, self.movement, g.tile_rects)
         if collisions['bottom'] == True:
+            self.jumping = False
             self.air_timer = 0
             self.vertical_momentum = 0
         else:
@@ -237,8 +253,12 @@ class Player(object):
         if collisions['top'] == True:
             self.vertical_momentum = 0
 
-
     def moving(self):
+        self.falling = False
+        if self.air_timer > 3 and self.vertical_momentum < 0:
+            self.jumping = True
+        elif self.air_timer > 30 and self.vertical_momentum >= 3:
+            self.falling = True
         self.movement = [0, 0]
         if self.moving_right == True:
             self.movement[0] += 2
@@ -249,26 +269,45 @@ class Player(object):
         if self.vertical_momentum > 3:
             self.vertical_momentum = 3
 
-    def draw(self):
+    def animate(self):
         if self.walkCount + 1 >= 48:
             self.walkCount = 0
         if self.idleCount + 1 >= 48:
             self.idleCount = 0
+        if self.jumpCount + 1 >= 24:
+            self.jumpCount = 0
+        if self.fallCount + 1 >= 24:
+            self.fallCount = 0
 
-        if not (self.standing):
+        if (self.jumping) and self.lookingright:
+            g.display.blit(JumpR[int(self.jumpCount // 6)].convert_alpha(), (int(self.rect.x - scroll[0]), int(self.rect.y - scroll[1])))
+            self.jumpCount += 1
+            self.jumping = False
+        elif self.jumping and self.lookingleft:
+            g.display.blit(JumpL[int(self.jumpCount // 6)].convert_alpha(), (int(self.rect.x - scroll[0]), int(self.rect.y - scroll[1])))
+            self.jumpCount += 1
+            self.jumping = False
+        elif (self.falling) and self.lookingright:
+            g.display.blit(Falling[int(self.fallCount // 6)].convert_alpha(), (int(self.rect.x - scroll[0]), int(self.rect.y - scroll[1])))
+            self.fallCount += 1
+        elif self.falling and self.lookingleft:
+            g.display.blit(FallingL[int(self.fallCount // 6)].convert_alpha(), (int(self.rect.x - scroll[0]), int(self.rect.y - scroll[1])))
+            self.fallCount += 1
+        elif not (self.standing):
             if self.lookingright:
-                g.display.blit(walkRight[self.walkCount // 6], (self.rect.x-scroll[0], self.rect.y-scroll[1]))
+                g.display.blit(walkRight[int(self.walkCount // 6)].convert_alpha(), (int(self.rect.x-scroll[0]), int(self.rect.y-scroll[1])))
                 self.walkCount += 1
             elif self.lookingleft:
-                g.display.blit(walkLeft[self.walkCount // 6], (self.rect.x-scroll[0], self.rect.y-scroll[1]))
+                g.display.blit(walkLeft[int(self.walkCount // 6)].convert_alpha(), (int(self.rect.x-scroll[0]), int(self.rect.y-scroll[1])))
                 self.walkCount += 1
         else:
             if self.lookingright:
-                g.display.blit(IdleRight[self.idleCount // 6], (self.rect.x-scroll[0], self.rect.y-scroll[1]))
+                g.display.blit(IdleRight[int(self.idleCount // 6)].convert_alpha(), (int(self.rect.x-scroll[0]), int(self.rect.y-scroll[1])))
                 self.idleCount += 1
             elif self.lookingleft:
-                g.display.blit(IdleLeft[self.idleCount // 6], (self.rect.x-scroll[0], self.rect.y-scroll[1]))
+                g.display.blit(IdleLeft[int(self.idleCount // 6)].convert_alpha(), (int(self.rect.x-scroll[0]), int(self.rect.y-scroll[1])))
                 self.idleCount += 1
+
 
 g = Game()
 while g.running:
