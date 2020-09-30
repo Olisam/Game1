@@ -380,6 +380,7 @@ class Player(object):
                 self.rect.x += 20
                 g.enemy.rect.x -= 10
 
+
     def check_life(self):
         if self.health <= 0:
             g.restart()
