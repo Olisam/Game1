@@ -1,10 +1,12 @@
 import pygame
 import sys
 from pygame.locals import *
+
 pygame.font.init()
 myfont = pygame.font.SysFont('Comic Sans MS', 30)
 
 clock = pygame.time.Clock()
+time_elapsed = 0
 
 WINDOW_WIDTH = 1200
 WINDOW_HEIGHT = 800
@@ -16,15 +18,24 @@ BG = pygame.image.load("Background1.png")
 background_objects = (0.25, (40, 40, 114, 67))
 scroll = [0, 0]
 
+def if_time_elapsed(seconds):
+    global time_elapsed
+    if time_elapsed > seconds*1000:
+        return True
+    else:
+        return False
+
+
 def load_map(file):
     f = open(file, 'r')
     data = f.read()
     f.close()
     data = data.split('\n')
-    gamemap = []
+    game_map = []
     for row in data:
-        gamemap.append(list(row))
-    return gamemap
+        game_map.append(list(row))
+    return game_map
+
 
 gamemap = load_map('level')
 
@@ -42,13 +53,13 @@ walkLeft = [pygame.image.load("WL1.png"), pygame.image.load("WL2.png"),
             pygame.image.load("WL5.png"), pygame.image.load("WL6.png"),
             pygame.image.load("WL7.png"), pygame.image.load("WL8.png")]
 walkRight = [pygame.image.load("W1.png"), pygame.image.load("W2.png"),
-            pygame.image.load("W3.png"), pygame.image.load("W4.png"),
-            pygame.image.load("W5.png"), pygame.image.load("W6.png"),
-            pygame.image.load("W7.png"), pygame.image.load("W8.png")]
+             pygame.image.load("W3.png"), pygame.image.load("W4.png"),
+             pygame.image.load("W5.png"), pygame.image.load("W6.png"),
+             pygame.image.load("W7.png"), pygame.image.load("W8.png")]
 IdleRight = [pygame.image.load("WI1.png"), pygame.image.load("WI1.png"),
-            pygame.image.load("WI2.png"), pygame.image.load("WI2.png"),
-            pygame.image.load("WI1.png"), pygame.image.load("WI1.png"),
-            pygame.image.load("WI2.png"), pygame.image.load("WI2.png")]
+             pygame.image.load("WI2.png"), pygame.image.load("WI2.png"),
+             pygame.image.load("WI1.png"), pygame.image.load("WI1.png"),
+             pygame.image.load("WI2.png"), pygame.image.load("WI2.png")]
 IdleLeft = [pygame.image.load("WIL1.png"), pygame.image.load("WIL1.png"),
             pygame.image.load("WIL2.png"), pygame.image.load("WIL2.png"),
             pygame.image.load("WIL1.png"), pygame.image.load("WIL1.png"),
@@ -58,16 +69,19 @@ JumpR = [pygame.image.load("Wjump2.png"), pygame.image.load("Wjump2.png"),
 JumpL = [pygame.image.load("WjumpL2.png"), pygame.image.load("WjumpL2.png"),
          pygame.image.load("WjumpL2.png"), pygame.image.load("WjumpL2.png")]
 Falling = [pygame.image.load("Wfalling1.png"), pygame.image.load("Wfalling1.png"),
-         pygame.image.load("Wfalling2.png"), pygame.image.load("Wfalling2.png")]
+           pygame.image.load("Wfalling2.png"), pygame.image.load("Wfalling2.png")]
 FallingL = [pygame.image.load("WfallingL1.png"), pygame.image.load("WfallingL1.png"),
-         pygame.image.load("WfallingL2.png"), pygame.image.load("WfallingL2.png")]
+            pygame.image.load("WfallingL2.png"), pygame.image.load("WfallingL2.png")]
+TakenDamage = [pygame.image.load("WTakingDamage.png"), pygame.image.load("WTakingDamage.png")]
 
-def collision_test(rect,tiles):
+
+def collision_test(rect, tiles):
     hit_list = []
     for tile in tiles:
         if rect.colliderect(tile):
             hit_list.append(tile)
     return hit_list
+
 
 def move(rect, movement, tiles):
     collision_types = {'top': False, 'bottom': False, 'right': False, 'left': False}
@@ -91,6 +105,7 @@ def move(rect, movement, tiles):
             collision_types['top'] = True
     return rect, collision_types
 
+
 class Game:
     def __init__(self):
         pygame.init()
@@ -99,11 +114,12 @@ class Game:
         self.display = pygame.Surface((WIDTH, HEIGHT))
         self.clock = pygame.time.Clock()
         self.running = True
+        self.playing = False
         self.player = Player()
         self.tile_rects = []
         self.dirt_img = pygame.image.load("dirt.png").convert()
         self.grass_img = pygame.image.load("grass.png").convert()
-        self.enemy = enemy(70, 40, 5, 145)
+        self.enemy = enemy(140, 40, 5, 145)
 
     def new(self):
         self.player.initialise()
@@ -122,12 +138,14 @@ class Game:
             self.draw()
 
     def update(self):
+        global time_elapsed
         if self.player.rect.y > 215:
             self.restart()
-        clock.tick(FPS)
+        t = clock.tick(FPS)
+        time_elapsed += t
+
         self.player.update()
         pygame.display.update()
-
 
     def events(self):
         for event in pygame.event.get():
@@ -162,7 +180,7 @@ class Game:
                     self.player.standing = True
 
     def main_menu(self):
-        textsurface = myfont.render('Start Game', False, ((WHITE)))
+        textsurface = myfont.render('Start Game', False, WHITE)
         while True:
 
             click = False
@@ -199,18 +217,17 @@ class Game:
     def draw(self):
         self.display.blit(BG.convert(), (0, 0))
 
-
         obj_rect = pygame.Rect(int(40 - scroll[0] * 0.35), int(40 - scroll[1] * 0.25), 114, 67)
         self.display.blit(cloud, (obj_rect.x, obj_rect.y))
         obj_rect1 = pygame.Rect(int(140 - scroll[0] * 0.5), int(50 - scroll[1] * 0.5), 114, 67)
         self.display.blit(cloud, (obj_rect1.x, obj_rect1.y))
 
-        self.drawTiles()
+        self.drawtiles()
         self.player.animate()
         self.enemy.render()
         self.screen.blit(pygame.transform.scale(self.display, (WINDOW_WIDTH, WINDOW_HEIGHT)), (0, 0))
 
-    def drawTiles(self):
+    def drawtiles(self):
         scroll[0] += (self.player.rect.x - 110 - scroll[0]) / 20
         scroll[1] += (self.player.rect.y - 100 - scroll[1]) / 20
         self.tile_rects.clear()
@@ -219,19 +236,20 @@ class Game:
             x = 0
             for tile in layer:
                 if tile == '1':
-                    self.display.blit(dirt_img.convert(), (int(x * 16-scroll[0]), int(y * 16-scroll[1])))
+                    self.display.blit(dirt_img.convert(), (int(x * 16 - scroll[0]), int(y * 16 - scroll[1])))
                 if tile == '2':
-                    self.display.blit(grass_img.convert(), (int(x * 16-scroll[0]), int(y * 16-scroll[1])))
+                    self.display.blit(grass_img.convert(), (int(x * 16 - scroll[0]), int(y * 16 - scroll[1])))
                 if tile == '3':
-                    self.display.blit(grassL_img.convert_alpha(), (int(x * 16-scroll[0]), int(y * 16-scroll[1])))
+                    self.display.blit(grassL_img.convert_alpha(), (int(x * 16 - scroll[0]), int(y * 16 - scroll[1])))
                 if tile == '4':
-                    self.display.blit(grassR_img.convert_alpha(), (int(x * 16-scroll[0]), int(y * 16-scroll[1])))
+                    self.display.blit(grassR_img.convert_alpha(), (int(x * 16 - scroll[0]), int(y * 16 - scroll[1])))
                 if tile == '5':
-                    self.display.blit(dirtSR.convert_alpha(), (int(x * 16-scroll[0]), int(y * 16-scroll[1])))
+                    self.display.blit(dirtSR.convert_alpha(), (int(x * 16 - scroll[0]), int(y * 16 - scroll[1])))
                 if tile != '0':
                     self.tile_rects.append(pygame.Rect(x * 16, y * 16, 16, 16))
                 x += 1
             y += 1
+
 
 class Player(object):
     def __init__(self):
@@ -248,28 +266,33 @@ class Player(object):
         self.idleCount = 0
         self.jumpCount = 0
         self.fallCount = 0
+        self.damageCount = 0
         self.standing = True
         self.jumping = False
         self.falling = False
         self.enemy_rects = []
         self.takingdamage = False
+        self.health = 100
 
     def initialise(self):
         self.rect.x = 30
         self.rect.y = 40
         self.lookingright = True
+        self.health = 100
 
     def update(self):
         self.moving()
         self.rect, collisions = move(self.rect, self.movement, g.tile_rects)
-        if collisions['bottom'] == True:
+        if collisions['bottom']:
             self.jumping = False
             self.air_timer = 0
             self.vertical_momentum = 0
         else:
             self.air_timer += 1
-        if collisions['top'] == True:
+        if collisions['top']:
             self.vertical_momentum = 0
+        self.check_for_damage()
+        self.check_life()
 
     def moving(self):
         self.falling = False
@@ -278,9 +301,9 @@ class Player(object):
         elif self.air_timer > 30 and self.vertical_momentum >= 3:
             self.falling = True
         self.movement = [0, 0]
-        if self.moving_right == True:
+        if self.moving_right:
             self.movement[0] += 2
-        if self.moving_left == True:
+        if self.moving_left:
             self.movement[0] -= 2
         self.movement[1] += self.vertical_momentum
         self.vertical_momentum += 0.4
@@ -297,34 +320,69 @@ class Player(object):
         if self.fallCount + 1 >= 24:
             self.fallCount = 0
 
-        if (self.jumping) and self.lookingright:
+        if self.takingdamage:
+            if if_time_elapsed(0.2):
+                self.takingdamage = False
+
+            g.display.blit(TakenDamage[1].convert_alpha(),
+                           (int(self.rect.x - scroll[0]), int(self.rect.y - scroll[1])))
+
+        elif self.jumping and self.lookingright:
             g.display.blit(JumpR[int(self.jumpCount // 6)].convert_alpha(), (int(self.rect.x - scroll[0]), int(self.rect.y - scroll[1])))
             self.jumpCount += 1
             self.jumping = False
         elif self.jumping and self.lookingleft:
-            g.display.blit(JumpL[int(self.jumpCount // 6)].convert_alpha(), (int(self.rect.x - scroll[0]), int(self.rect.y - scroll[1])))
+            g.display.blit(JumpL[int(self.jumpCount // 6)].convert_alpha(),
+                           (int(self.rect.x - scroll[0]), int(self.rect.y - scroll[1])))
             self.jumpCount += 1
             self.jumping = False
-        elif (self.falling) and self.lookingright:
-            g.display.blit(Falling[int(self.fallCount // 6)].convert_alpha(), (int(self.rect.x - scroll[0]), int(self.rect.y - scroll[1])))
+        elif self.falling and self.lookingright:
+            g.display.blit(Falling[int(self.fallCount // 6)].convert_alpha(),
+                           (int(self.rect.x - scroll[0]), int(self.rect.y - scroll[1])))
             self.fallCount += 1
         elif self.falling and self.lookingleft:
-            g.display.blit(FallingL[int(self.fallCount // 6)].convert_alpha(), (int(self.rect.x - scroll[0]), int(self.rect.y - scroll[1])))
+            g.display.blit(FallingL[int(self.fallCount // 6)].convert_alpha(),
+                           (int(self.rect.x - scroll[0]), int(self.rect.y - scroll[1])))
             self.fallCount += 1
-        elif not (self.standing):
+        elif not self.standing:
             if self.lookingright:
-                g.display.blit(walkRight[int(self.walkCount // 6)].convert_alpha(), (int(self.rect.x-scroll[0]), int(self.rect.y-scroll[1])))
+                g.display.blit(walkRight[int(self.walkCount // 6)].convert_alpha(),
+                               (int(self.rect.x - scroll[0]), int(self.rect.y - scroll[1])))
                 self.walkCount += 1
             elif self.lookingleft:
-                g.display.blit(walkLeft[int(self.walkCount // 6)].convert_alpha(), (int(self.rect.x-scroll[0]), int(self.rect.y-scroll[1])))
+                g.display.blit(walkLeft[int(self.walkCount // 6)].convert_alpha(),
+                               (int(self.rect.x - scroll[0]), int(self.rect.y - scroll[1])))
                 self.walkCount += 1
         else:
             if self.lookingright:
-                g.display.blit(IdleRight[int(self.idleCount // 6)].convert_alpha(), (int(self.rect.x-scroll[0]), int(self.rect.y-scroll[1])))
+                g.display.blit(IdleRight[int(self.idleCount // 6)].convert_alpha(),
+                               (int(self.rect.x - scroll[0]), int(self.rect.y - scroll[1])))
                 self.idleCount += 1
             elif self.lookingleft:
-                g.display.blit(IdleLeft[int(self.idleCount // 6)].convert_alpha(), (int(self.rect.x-scroll[0]), int(self.rect.y-scroll[1])))
+                g.display.blit(IdleLeft[int(self.idleCount // 6)].convert_alpha(),
+                               (int(self.rect.x - scroll[0]), int(self.rect.y - scroll[1])))
                 self.idleCount += 1
+
+    def check_for_damage(self):
+        global time_elapsed
+        print(self.health)
+        print(self.takingdamage)
+        print(time_elapsed)
+        if self.rect.colliderect(g.enemy.rect):
+
+            time_elapsed = 0
+            self.health -= 20
+            self.takingdamage = True
+            if self.rect.x < g.enemy.rect.x:
+                self.rect.x -= 20
+                g.enemy.rect.x += 10
+            elif self.rect.x > g.enemy.rect.x:
+                self.rect.x += 20
+                g.enemy.rect.x -= 10
+
+    def check_life(self):
+        if self.health <= 0:
+            g.restart()
 
 class enemy(object):
     def __init__(self, x, y, start, end):
@@ -338,6 +396,7 @@ class enemy(object):
         self.end = end
         self.direction = 1
         self.target = end
+        self.jumpCount = 0
 
     def initialise(self):
         self.vertical_momentum = 0
@@ -347,6 +406,7 @@ class enemy(object):
 
     def render(self):
         self.move()
+        self.jump()
         g.display.blit(slime, (self.rect.x - scroll[0], self.rect.y - scroll[1]))
 
     def move(self):
@@ -368,15 +428,30 @@ class enemy(object):
         if self.vertical_momentum > 3:
             self.vertical_momentum = 3
         self.rect, collisions = move(self.rect, self.movement, g.tile_rects)
-        if collisions['bottom'] == True:
+        if collisions['bottom']:
             self.vertical_momentum = 0
-        if collisions['top'] == True:
+        if collisions['top']:
             self.vertical_momentum = 0
-        if self.rect.colliderect(g.player.rect):
-            g.restart()
+
+    def jump(self):
+        if self.jumpCount + 1 == 48:
+            self.jumpCount = 0
+        self.jumpCount += 1
+        if 96 // self.jumpCount == 8:
+            self.vertical_momentum = -3
+
+
+
+
+
+
+
+
+
 
 g = Game()
 while g.running:
     g.main_menu()
+
 
 pygame.quit()
