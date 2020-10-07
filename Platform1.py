@@ -38,6 +38,7 @@ def load_map(file):
 
 
 gamemap = load_map('level')
+housemap = load_map('levelinside')
 
 grass_img = pygame.image.load('grass.png')
 dirt_img = pygame.image.load('dirt.png')
@@ -45,9 +46,17 @@ grassL_img = pygame.image.load('grassL.png')
 grassR_img = pygame.image.load('grassR.png')
 dirtSR = pygame.image.load('DirtSideR.png')
 cloud = pygame.image.load('Cloud.png')
-slime = pygame.image.load('slime.png')
+Gslime = pygame.image.load('slime.png')
 main_Menu = pygame.image.load('Main_Menu.png')
 standingL = pygame.image.load("WL1.png")
+house = pygame.image.load("HouseTest.png")
+doorhitbox = pygame.image.load("doorhitbox.png")
+houseinside = pygame.image.load("houseinside.png")
+heart1 = pygame.transform.scale(pygame.image.load("Heart1.png"), (245, 40))
+heart2 = pygame.transform.scale(pygame.image.load("Heart2.png"), (245, 40))
+heart3 = pygame.transform.scale(pygame.image.load("Heart3.png"), (245, 40))
+heart4 = pygame.transform.scale(pygame.image.load("Heart4.png"), (245, 40))
+heart5 = pygame.transform.scale(pygame.image.load("Heart5.png"), (245, 40))
 walkLeft = [pygame.image.load("WL1.png"), pygame.image.load("WL2.png"),
             pygame.image.load("WL3.png"), pygame.image.load("WL4.png"),
             pygame.image.load("WL5.png"), pygame.image.load("WL6.png"),
@@ -119,11 +128,16 @@ class Game:
         self.tile_rects = []
         self.dirt_img = pygame.image.load("dirt.png").convert()
         self.grass_img = pygame.image.load("grass.png").convert()
-        self.enemy = enemy(140, 40, 5, 145)
+        self.enemy = slime(140, 40, 5, 145)
+        self.enemy2 = slime(200, 40, 150, 210)
+        self.inhouse = False
 
     def new(self):
+        global scroll
         self.player.initialise()
         self.enemy.initialise()
+        self.enemy2.initialise()
+        scroll = [0, -300]
         self.run()
 
     def restart(self):
@@ -137,8 +151,30 @@ class Game:
             self.update()
             self.draw()
 
+    def inside_house(self):
+        self.display.blit(houseinside, (0, 0))
+        self.drawtiles()
+
+    def outside(self):
+        self.display.blit(BG.convert(), (0, 0))
+
+        obj_rect = pygame.Rect(int(40 - scroll[0] * 0.35), int(40 - scroll[1] * 0.25), 114, 67)
+        self.display.blit(cloud, (obj_rect.x, obj_rect.y))
+        obj_rect1 = pygame.Rect(int(140 - scroll[0] * 0.5), int(50 - scroll[1] * 0.5), 114, 67)
+        self.display.blit(cloud, (obj_rect1.x, obj_rect1.y))
+        door_rect = pygame.Rect((110 - scroll[0]), (38 - scroll[1]), 19, 27)
+        self.drawtiles()
+        house_rect = pygame.Rect((50 - scroll[0]), (7 - scroll[1]), 106, 55)
+
+        self.display.blit(house, (house_rect.x, house_rect.y))
+        if self.player.rect.x > 100 and self.player.rect.x < 119:
+            self.display.blit(doorhitbox, (door_rect.x, door_rect.y))
+
+
+
     def update(self):
         global time_elapsed
+
         if self.player.rect.y > 215:
             self.restart()
         t = clock.tick(FPS)
@@ -171,7 +207,11 @@ class Game:
                         self.player.vertical_momentum = -5
                 if event.key == K_r:
                     self.restart()
+                if event.key == K_e and self.player.rect.x > 100 and self.player.rect.x < 119:
+                    self.inhouse = True
             if event.type == KEYUP:
+                if event.key == K_e:
+                    pass
                 if event.key == K_RIGHT:
                     self.player.moving_right = False
                     self.player.standing = True
@@ -198,7 +238,7 @@ class Game:
                     if event.button == 1:
                         click = True
 
-            self.screen.blit(pygame.transform.scale(main_Menu, (1200, 800)), (0, 0))
+            self.screen.blit(pygame.transform.scale(main_Menu, (WINDOW_WIDTH, WINDOW_HEIGHT)), (0, 0))
 
             mx, my = pygame.mouse.get_pos()
 
@@ -215,40 +255,56 @@ class Game:
             clock.tick(60)
 
     def draw(self):
-        self.display.blit(BG.convert(), (0, 0))
-
-        obj_rect = pygame.Rect(int(40 - scroll[0] * 0.35), int(40 - scroll[1] * 0.25), 114, 67)
-        self.display.blit(cloud, (obj_rect.x, obj_rect.y))
-        obj_rect1 = pygame.Rect(int(140 - scroll[0] * 0.5), int(50 - scroll[1] * 0.5), 114, 67)
-        self.display.blit(cloud, (obj_rect1.x, obj_rect1.y))
-
-        self.drawtiles()
+        if self.inhouse == False:
+            self.outside()
+        if self.inhouse == True:
+            self.inside_house()
         self.player.animate()
-        self.enemy.render()
         self.screen.blit(pygame.transform.scale(self.display, (WINDOW_WIDTH, WINDOW_HEIGHT)), (0, 0))
 
+        print(self.player.rect.y)
+
+
     def drawtiles(self):
-        scroll[0] += (self.player.rect.x - 110 - scroll[0]) / 20
-        scroll[1] += (self.player.rect.y - 100 - scroll[1]) / 20
         self.tile_rects.clear()
-        y = 0
-        for layer in gamemap:
-            x = 0
-            for tile in layer:
-                if tile == '1':
-                    self.display.blit(dirt_img.convert(), (int(x * 16 - scroll[0]), int(y * 16 - scroll[1])))
-                if tile == '2':
-                    self.display.blit(grass_img.convert(), (int(x * 16 - scroll[0]), int(y * 16 - scroll[1])))
-                if tile == '3':
-                    self.display.blit(grassL_img.convert_alpha(), (int(x * 16 - scroll[0]), int(y * 16 - scroll[1])))
-                if tile == '4':
-                    self.display.blit(grassR_img.convert_alpha(), (int(x * 16 - scroll[0]), int(y * 16 - scroll[1])))
-                if tile == '5':
-                    self.display.blit(dirtSR.convert_alpha(), (int(x * 16 - scroll[0]), int(y * 16 - scroll[1])))
-                if tile != '0':
-                    self.tile_rects.append(pygame.Rect(x * 16, y * 16, 16, 16))
-                x += 1
-            y += 1
+        if self.inhouse == False:
+            if scroll[0] <=0:
+                scroll[0] = 0
+            if scroll[0] >= 420:
+                scroll[0] = 420
+            scroll[0] += (self.player.rect.x - 110 - scroll[0]) / 20
+            scroll[1] += (self.player.rect.y - 100 - scroll[1]) / 20
+            self.tile_rects.clear()
+            y = 0
+            for layer in gamemap:
+                x = 0
+                for tile in layer:
+                    if tile == '1':
+                        self.display.blit(dirt_img.convert(), (int(x * 16 - scroll[0]), int(y * 16 - scroll[1])))
+                    if tile == '2':
+                        self.display.blit(grass_img.convert(), (int(x * 16 - scroll[0]), int(y * 16 - scroll[1])))
+                    if tile == '3':
+                        self.display.blit(grassL_img.convert_alpha(), (int(x * 16 - scroll[0]), int(y * 16 - scroll[1])))
+                    if tile == '4':
+                        self.display.blit(grassR_img.convert_alpha(), (int(x * 16 - scroll[0]), int(y * 16 - scroll[1])))
+                    if tile == '5':
+                        self.display.blit(dirtSR.convert_alpha(), (int(x * 16 - scroll[0]), int(y * 16 - scroll[1])))
+                    if tile != '0':
+                        self.tile_rects.append(pygame.Rect(x * 16, y * 16, 16, 16))
+                    x += 1
+                y += 1
+        if self.inhouse == True:
+            self.tile_rects.clear()
+            y = 0
+            for layer in housemap:
+                x = 0
+                for tile in layer:
+                    if tile == '1':
+                        self.display.blit(dirt_img.convert(), (int(x * 16 - scroll[0]), int(y * 16 - scroll[1])))
+                    if tile != '0':
+                        self.tile_rects.append(pygame.Rect(x * 16, y * 16, 16, 16))
+                    x += 1
+                y += 1
 
 
 class Player(object):
@@ -256,7 +312,7 @@ class Player(object):
         self.moving_right = False
         self.moving_left = False
         self.vertical_momentum = 0
-        self.rect = pygame.Rect(30, 40, 16, 25)
+        self.rect = pygame.Rect(50, 40, 16, 25)
         self.movement = [0, 0]
         self.air_timer = 0
         self.collisions = []
@@ -275,12 +331,13 @@ class Player(object):
         self.health = 100
 
     def initialise(self):
-        self.rect.x = 30
+        self.rect.x = 50
         self.rect.y = 40
         self.lookingright = True
         self.health = 100
 
     def update(self):
+
         self.moving()
         self.rect, collisions = move(self.rect, self.movement, g.tile_rects)
         if collisions['bottom']:
@@ -364,28 +421,14 @@ class Player(object):
                 self.idleCount += 1
 
     def check_for_damage(self):
-        global time_elapsed
-        print(self.health)
-        print(self.takingdamage)
-        print(time_elapsed)
-        if self.rect.colliderect(g.enemy.rect):
-
-            time_elapsed = 0
-            self.health -= 20
-            self.takingdamage = True
-            if self.rect.x < g.enemy.rect.x:
-                self.rect.x -= 20
-                g.enemy.rect.x += 10
-            elif self.rect.x > g.enemy.rect.x:
-                self.rect.x += 20
-                g.enemy.rect.x -= 10
+        pass
 
 
     def check_life(self):
         if self.health <= 0:
             g.restart()
 
-class enemy(object):
+class slime(object):
     def __init__(self, x, y, start, end):
         self.rect = pygame.Rect(x, y, 9, 7)
         self.x = x
@@ -408,10 +451,9 @@ class enemy(object):
     def render(self):
         self.move()
         self.jump()
-        g.display.blit(slime, (self.rect.x - scroll[0], self.rect.y - scroll[1]))
+        g.display.blit(Gslime, (self.rect.x - scroll[0], self.rect.y - scroll[1]))
 
     def move(self):
-        print(g.clock)
         self.target = self.end
         self.movement = [0, 0]
         if self.rect.x * self.direction < self.target:
@@ -440,14 +482,6 @@ class enemy(object):
         self.jumpCount += 1
         if 96 // self.jumpCount == 8:
             self.vertical_momentum = -3
-
-
-
-
-
-
-
-
 
 
 g = Game()
