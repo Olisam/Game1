@@ -2,14 +2,16 @@ import pygame
 import sys
 from pygame.locals import *
 
+pygame.init()
 pygame.font.init()
+
 myfont = pygame.font.SysFont('Comic Sans MS', 30)
 
 clock = pygame.time.Clock()
 time_elapsed = 0
 
-WINDOW_WIDTH = 1200
-WINDOW_HEIGHT = 800
+WINDOW_WIDTH = 1800
+WINDOW_HEIGHT = 1200
 WIDTH = 300
 HEIGHT = 200
 FPS = 48
@@ -159,9 +161,9 @@ class Game:
         self.display.blit(BG.convert(), (0, 0))
 
         obj_rect = pygame.Rect(int(40 - scroll[0] * 0.35), int(40 - scroll[1] * 0.25), 114, 67)
-        self.display.blit(cloud, (obj_rect.x, obj_rect.y))
+
         obj_rect1 = pygame.Rect(int(140 - scroll[0] * 0.5), int(50 - scroll[1] * 0.5), 114, 67)
-        self.display.blit(cloud, (obj_rect1.x, obj_rect1.y))
+
         door_rect = pygame.Rect((110 - scroll[0]), (38 - scroll[1]), 19, 27)
         self.drawtiles()
         house_rect = pygame.Rect((50 - scroll[0]), (7 - scroll[1]), 106, 55)
